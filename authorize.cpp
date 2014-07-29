@@ -1,119 +1,101 @@
-#include <openssl/hmac.h>
-#include<iostream>
-#include<fstream>
-#include <stdio.h>
-#include <cstring>
-#include <openssl/evp.h>
-
-using namespace std;
-
-int write_key(unsigned char *myfile_path, unsigned char* key)
+/*int aes_encrypt_file(const char * infile, const char * outfile, const void * key, const void * iv, const EVP_CIPHER * cipher, int enc)
 {
+    assert(cipher != NULL);
 
+    int rc = -1;
+    int cipher_block_size = EVP_CIPHER_block_size(cipher);
 
-    ofstream myfile (myfile_path, ios::out | ios::binary);
-    if (myfile.is_open())
-    {
-        key ='SINGAPORE';
-        myfile.write(key, strlen(key));
-        myfile.close();
-        return 1;
+    assert(cipher_block_size <= BUF_SIZE);
+
+    // The output buffer size needs to be bigger to accomodate incomplete blocks
+    // See EVP_EncryptUpdate documentation for explanation:
+    //      http://lmgtfy.com/?q=EVP_EncryptUpdate
+    int insize = BUF_SIZE;
+    int outsize = insize + (cipher_block_size - 1);
+
+    unsigned char inbuf[insize], outbuf[outsize];
+    int ofh = -1, ifh = -1;
+    int u_len = 0, f_len = 0;
+
+    EVP_CIPHER_CTX ctx;
+    EVP_CIPHER_CTX_init(&ctx);
+
+    // Open the input and output files
+    rc = AES_ERR_FILE_OPEN;
+    if((ifh = open(infile, O_RDONLY)) == -1) {
+        fprintf(stderr, "ERROR: Could not open input file %s, errno = %s\n", infile, strerror(errno));
+        goto cleanup;
     }
-    else cout << "Unable to open file";
-    return 0;
-}
 
-unsigned char* load_key(char *key_name)
-{
-    streampos size;
-    char * memblock;
-
-    ifstream file (key_name, ios::in|ios::binary|ios::ate);
-    if (file.is_open())
-    {
-        size = file.tellg();
-        memblock = new char [size];
-        file.seekg (0, ios::beg);
-        file.read (memblock, size);
-        file.close();
-
-        cout << "the entire file content is in memory";
-        return memblock;
-        delete[] memblock;
+    if((ofh = open(outfile, O_CREAT | O_TRUNC | O_WRONLY, 0644)) == -1) {
+        fprintf(stderr, "ERROR: Could not open output file %s, errno = %s\n", outfile, strerror(errno));
+        goto cleanup;
     }
-    else cout << "Unable to open file";
-    return 0;
+
+    // Initialize the AES cipher for enc/dec
+    rc = AES_ERR_CIPHER_INIT;
+    if(EVP_CipherInit_ex(&ctx, cipher, NULL, key, iv, enc) == 0) {
+        fprintf(stderr, "ERROR: EVP_CipherInit_ex failed. OpenSSL error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+        goto cleanup;
+    }
+
+    // Read, pass through the cipher, write.
+    int read_size, len;
+    while((read_size = read(ifh, inbuf, BUF_SIZE)) > 0)
+    {
+        dbg("Read %d bytes, passing through CipherUpdate...\n", read_size);
+        if(EVP_CipherUpdate(&ctx, outbuf, &len, inbuf, read_size) == 0) {
+            rc = AES_ERR_CIPHER_UPDATE;
+            fprintf(stderr, "ERROR: EVP_CipherUpdate failed. OpenSSL error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+            goto cleanup;
+        }
+        dbg("\tGot back %d bytes from CipherUpdate...\n", len);
+
+        dbg("Writing %d bytes to %s...\n", len, outfile);
+        if(write(ofh, outbuf, len) != len) {
+            rc = AES_ERR_IO;
+            fprintf(stderr, "ERROR: Writing to the file %s failed. errno = %s\n", outfile, strerror(errno));
+            goto cleanup;
+        }
+        dbg("\tWrote %d bytes\n", len);
+
+        u_len += len;
+    }
+
+    // Check last read succeeded
+    if(read_size == -1) {
+        rc = AES_ERR_IO;
+        fprintf(stderr, "ERROR: Reading from the file %s failed. errno = %s\n", infile, strerror(errno));
+        goto cleanup;
+    }
+
+    // Finalize encryption/decryption
+    rc = AES_ERR_CIPHER_FINAL;
+    if(EVP_CipherFinal_ex(&ctx, outbuf, &f_len) == 0) {
+        fprintf(stderr, "ERROR: EVP_CipherFinal_ex failed. OpenSSL error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+        goto cleanup;
+    }
+
+    dbg("u_len = %d, f_len = %d\n", u_len, f_len);
+
+    // Write the final block, if any
+    if(f_len) {
+        dbg("Writing final %d bytes to %s...\n", f_len, outfile);
+        if(write(ofh, outbuf, f_len) != f_len) {
+            rc = AES_ERR_IO;
+            fprintf(stderr, "ERROR: Final write to the file %s failed. errno = %s\n", outfile, strerror(errno));
+            goto cleanup;
+        }
+        dbg("\tWrote last %d bytes\n", f_len);
+    }
+
+    rc = u_len + f_len;
+
+ cleanup:
+    EVP_CIPHER_CTX_cleanup(&ctx);
+    if(ifh != -1) close(ifh);
+    if(ofh != -1) close(ofh);
+
+    return rc;
 }
-
-
-
-unsigned char* generate_fk(unsigned char *key, unsigned char *filename)
-{
-
-    EVP_MD_CTX *mdctx;
-    mdctx = EVP_MD_CTX_create();
-
-    EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
-
-    EVP_DigestUpdate(mdctx, key, strlen(key));
-    EVP_DigestUpdate(mdctx, filename, strlen(filename));
-    EVP_DigestUpdate(mdctx, key, strlen(key));
-
-
-    unsigned char md_value[EVP_MAX_MD_SIZE];
-    unsigned int md_len;
-
-    EVP_DigestFinal_ex(mdctx, md_value, &md_len);
-    EVP_MD_CTX_destroy(mdctx);
-
-    //To Print the hash on screen
-    /*
-    int i;
-    printf("Digest is: ");
-    for(i = 0; i < md_len; i++) printf("%02x", md_value[i]);
-    printf("\n");
-    */
-    return md_value;
-}
-
-
-int main(int argc, char *argv[])
-{
-    char key[]      = "Darshan Pandit";
-    char filename[] = "abcderfg.txt";
-    unsigned char* final_key;
-    unsigned char* final_file;
-
-    final_key   = generate_fk(key,filename);
-    final_file  = "mykey";
-    int i;
-    i           = write_key(final_file,final_key);
-    cout<<i;
-    /* EVP_MD_CTX *mdctx;
-     const EVP_MD *md;
-     char mess1[] = "Test Message\n";
-     char mess2[] = "Hello World\n";
-     unsigned char md_value[EVP_MAX_MD_SIZE];
-     unsigned int md_len, i;
-     OpenSSL_add_all_digests();
-     char a ='1';
-     const char* digest_algo_code;
-     digest_algo_code = &a;
-     cout<<digest_algo_code;
-     md = EVP_get_digestbyname(digest_algo_code);
-     if(!md)
-     {
-         printf("Unknown message digest %s\n", digest_algo_code);
-         exit(1);
-     }
-     mdctx = EVP_MD_CTX_create();
-     EVP_DigestInit_ex(mdctx, md, NULL);
-     EVP_DigestUpdate(mdctx, mess1, strlen(mess1));
-     EVP_DigestUpdate(mdctx, mess2, strlen(mess2));
-     EVP_DigestFinal_ex(mdctx, md_value, &md_len);
-     EVP_MD_CTX_destroy(mdctx);
-     printf("Digest is: ");
-     for(i = 0; i < md_len; i++) printf("%02x", md_value[i]);
-     printf("\n");
-     */
-}
+*/

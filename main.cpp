@@ -43,7 +43,7 @@ int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
   ciphertext_len += len;
 
   /* Clean up */
-  EVP_CIPHER_CTX_free(ctx);
+  //EVP_CIPHER_CTX_free(ctx);
 
   return ciphertext_len;
 }
