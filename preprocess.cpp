@@ -122,20 +122,20 @@ Pseudo:
 
 int main(int argc, char* argv[])
 {
-    /*
+    
 
        if (argc < 2)   // Check the value of argc. If not enough parameters have been passed, inform user and exit.
        {
-           std::cout << "Usage is authorize <shared_keyfile> <file_to_encrypt>"; // Inform the user of how to use the program
+           std::cout << "Usage is preprocess <shared_keyfile> <file_to_encrypt>"; // Inform the user of how to use the program
            std::cin.get();
            exit(0);
        }
        char* keyfile_path = argv[0];
        char* fn1_path = argv[1];
-       char* readable_hash = compute_hash()
-    */
-    char* keyfile_path = "b33563x551682c19a781afebcf4dx7bf978fb1f8acx4c6bf87428ed5106870f5.share";
-    char* fn1_path = "README.md";
+    //   char* readable_hash = compute_hash()
+    
+    //char* keyfile_path = "b33563x551682c19a781afebcf4dx7bf978fb1f8acx4c6bf87428ed5106870f5.share";
+    //char* fn1_path = "README.md";
 
     vector<char>temp_hash = compute_hash(fn1_path,strlen(fn1_path));
     string readable_temp_hash = get_readable_hash(temp_hash);
