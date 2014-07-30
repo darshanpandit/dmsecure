@@ -114,15 +114,15 @@ std::string get_readable_hash(vector<char> myhash)
 
 /**
 Input: keyfile, file_to_encrypt
-Output: Generates a .key file by the name fn2
+Output: Generates a file by the name fn2
 Pseudo:
-    fk <- hash(E(k,fn1))
-    fn2 <- hash(f1)
+    f2 <- E( fk, f1||hash(f1) )
+    fn2 <- hash(fn1)
 */
 
 int main(int argc, char* argv[])
 {
-    
+
 
        if (argc < 2)   // Check the value of argc. If not enough parameters have been passed, inform user and exit.
        {
@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
        char* keyfile_path = argv[0];
        char* fn1_path = argv[1];
     //   char* readable_hash = compute_hash()
-    
+
     //char* keyfile_path = "b33563x551682c19a781afebcf4dx7bf978fb1f8acx4c6bf87428ed5106870f5.share";
     //char* fn1_path = "README.md";
 
