@@ -122,27 +122,53 @@ Pseudo:
 
 int main(int argc, char* argv[])
 {
+    /*
 
-    if (argc < 2)   // Check the value of argc. If not enough parameters have been passed, inform user and exit.
+       if (argc < 2)   // Check the value of argc. If not enough parameters have been passed, inform user and exit.
+       {
+           std::cout << "Usage is authorize <shared_keyfile> <file_to_encrypt>"; // Inform the user of how to use the program
+           std::cin.get();
+           exit(0);
+       }
+       char* keyfile_path = argv[0];
+       char* fn1_path = argv[1];
+       char* readable_hash = compute_hash()
+    */
+    char* keyfile_path = "b33563x551682c19a781afebcf4dx7bf978fb1f8acx4c6bf87428ed5106870f5.share";
+    char* fn1_path = "README.md";
+
+    vector<char>temp_hash = compute_hash(fn1_path,strlen(fn1_path));
+    string readable_temp_hash = get_readable_hash(temp_hash);
+    string fn1_hash = string(keyfile_path,(strlen(keyfile_path)-6));
+    if (readable_temp_hash.compare(fn1_hash) != 0)
     {
-        std::cout << "Usage is authorize <keyfile> <file_to_encrypt>"; // Inform the user of how to use the program
-        std::cin.get();
+        cout<<"The filename you are trying to upload is not associated with the key. Please verify the file-key pair.";
+        getchar();
         exit(0);
     }
-    char* keyfile_path = argv[0];
-    char* fn1_path = argv[1];
 
-    //char* keyfile_path = "abcd";
-    //char* fn1_path = "README.md";
-    vector<char> key = read_data(argv[0]);
-    vector<char> fk = generate_fk(&key[0],fn1_path);
-    vector<char> fn2_vector = compute_hash(fn1_path, strlen(fn1_path));
-    string fn2_name = get_readable_hash(fn2_vector);
-    fn2_name.append(".share");
+    vector<char> key_vec = read_data(keyfile_path);
+    vector<char> plaintext_vec = read_data(fn1_path);
+    vector<char> f1_hash_vec = compute_hash(&plaintext_vec[0], plaintext_vec.size());
+    vector<char> payload_vec;
+    payload_vec.insert(payload_vec.end(),plaintext_vec.begin(),plaintext_vec.end());
+    payload_vec.insert(payload_vec.end(),f1_hash_vec.begin(),f1_hash_vec.end());
+    //std::copy(payload_vec.begin(), payload_vec.end(), std::ostream_iterator<char>(cout, ""));
+    char* iv="01234567890123456";
 
-    int success = write_data(fk,&fn2_name[0]);
-    cout<<success<<" bits were written in shared_key"<<endl;
-    cout<<"Please check for a key to share file as :"<<fn2_name<<endl<<"The file should be stored on the server by the same name. It is fn2."<<endl;
+    char ciphertext[payload_vec.size()+16];
+    int cipher_len= encrypt(&payload_vec[0],payload_vec.size(),&key_vec[0],iv,ciphertext);
+
+    char* cipher_end = ciphertext+(cipher_len);
+    vector<char> cipher_vec(ciphertext, cipher_end);
+
+    //To make a name for the file
+    string fn2_final = string(keyfile_path,(strlen(keyfile_path)-6));
+    //fn2_final.append(".data");
+
+    int success = write_data(cipher_vec,&fn2_final[0]);
+    cout<<success<<" bits were written in the encrypted file"<<endl;
+    cout<<"You can now deploy the following file and share it : "<<fn2_final<<endl<<"The file is can be made public. Only those who have fk can read it."<<endl;
     cout<<"Thank you."<<endl;
     getchar();
     //Write fk to a file by name fn2.share.key.
