@@ -130,8 +130,9 @@ int main(int argc, char* argv[])
            std::cin.get();
            exit(0);
        }
-       char* keyfile_path = argv[0];
-       char* fn1_path = argv[1];
+       char* keyfile_path = argv[1];
+       char* fn1_path = argv[2];
+
     //   char* readable_hash = compute_hash()
 
     //char* keyfile_path = "b33563x551682c19a781afebcf4dx7bf978fb1f8acx4c6bf87428ed5106870f5.share";

@@ -120,8 +120,8 @@ int main(int argc, char* argv[])
         std::cin.get();
         exit(0);
     }
-    char* keyfile_path = argv[0];
-    char* fn2_path = argv[1];
+    char* keyfile_path = argv[1];
+    char* fn2_path = argv[2];
 
     //char* keyfile_path = "b33563x551682c19a781afebcf4dx7bf978fb1f8acx4c6bf87428ed5106870f5.share";
     //char* fn2_path = "b33563x551682c19a781afebcf4dx7bf978fb1f8acx4c6bf87428ed5106870f5";
@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
         getchar();
         exit(0);
     }
-    cout<<"MAC codes matched. Integrity has not been satisfied. Now dumping the uncompressed text."<<endl;
+    cout<<"MAC codes matched. Integrity has been satisfied. Now dumping the uncompressed text."<<endl;
     string fn3 = string(fn2_path,strlen(fn2_path));
     fn3.append(".data");
     write_data(f1,&fn3[0]);

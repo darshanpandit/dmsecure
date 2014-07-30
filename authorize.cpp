@@ -50,6 +50,7 @@ vector<char> compute_hash(char* text,int text_len)
     EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
     EVP_DigestUpdate(mdctx, text, text_len);
     char md_value[32];
+
     int md_len;
     EVP_DigestFinal_ex(mdctx, md_value, &md_len);
     EVP_MD_CTX_destroy(mdctx);
@@ -129,8 +130,8 @@ int main(int argc, char* argv[])
         std::cin.get();
         exit(0);
     }
-    char* keyfile_path = argv[0];
-    char* fn1_path = argv[1];
+    char* keyfile_path = argv[1];
+    char* fn1_path = argv[2];
 
     //char* keyfile_path = "abcd";
     //char* fn1_path = "README.md";
