@@ -1,101 +1,150 @@
-/*int aes_encrypt_file(const char * infile, const char * outfile, const void * key, const void * iv, const EVP_CIPHER * cipher, int enc)
+#include <iostream>
+#include<fstream>
+
+#include<vector>
+#include <iterator>
+
+#include<cstring>
+#include <string>
+#include<sstream>
+#include <iomanip>
+
+#include <openssl/evp.h>
+#include <openssl/conf.h>
+#include <openssl/err.h>
+
+using namespace std;
+
+int write_data(vector<char> data, char* filename)
 {
-    assert(cipher != NULL);
+    std::vector<char>::const_iterator i;
+    ofstream myfile (filename, ios::out | ios::binary);
+    //vector<char> data;
+    //std::copy(data1.begin(), data1.end(), std::back_inserter(data));
+    std::copy(data.begin(), data.end(), std::ostream_iterator<char>(myfile, ""));
 
-    int rc = -1;
-    int cipher_block_size = EVP_CIPHER_block_size(cipher);
-
-    assert(cipher_block_size <= BUF_SIZE);
-
-    // The output buffer size needs to be bigger to accomodate incomplete blocks
-    // See EVP_EncryptUpdate documentation for explanation:
-    //      http://lmgtfy.com/?q=EVP_EncryptUpdate
-    int insize = BUF_SIZE;
-    int outsize = insize + (cipher_block_size - 1);
-
-    unsigned char inbuf[insize], outbuf[outsize];
-    int ofh = -1, ifh = -1;
-    int u_len = 0, f_len = 0;
-
-    EVP_CIPHER_CTX ctx;
-    EVP_CIPHER_CTX_init(&ctx);
-
-    // Open the input and output files
-    rc = AES_ERR_FILE_OPEN;
-    if((ifh = open(infile, O_RDONLY)) == -1) {
-        fprintf(stderr, "ERROR: Could not open input file %s, errno = %s\n", infile, strerror(errno));
-        goto cleanup;
-    }
-
-    if((ofh = open(outfile, O_CREAT | O_TRUNC | O_WRONLY, 0644)) == -1) {
-        fprintf(stderr, "ERROR: Could not open output file %s, errno = %s\n", outfile, strerror(errno));
-        goto cleanup;
-    }
-
-    // Initialize the AES cipher for enc/dec
-    rc = AES_ERR_CIPHER_INIT;
-    if(EVP_CipherInit_ex(&ctx, cipher, NULL, key, iv, enc) == 0) {
-        fprintf(stderr, "ERROR: EVP_CipherInit_ex failed. OpenSSL error: %s\n", ERR_error_string(ERR_get_error(), NULL));
-        goto cleanup;
-    }
-
-    // Read, pass through the cipher, write.
-    int read_size, len;
-    while((read_size = read(ifh, inbuf, BUF_SIZE)) > 0)
-    {
-        dbg("Read %d bytes, passing through CipherUpdate...\n", read_size);
-        if(EVP_CipherUpdate(&ctx, outbuf, &len, inbuf, read_size) == 0) {
-            rc = AES_ERR_CIPHER_UPDATE;
-            fprintf(stderr, "ERROR: EVP_CipherUpdate failed. OpenSSL error: %s\n", ERR_error_string(ERR_get_error(), NULL));
-            goto cleanup;
-        }
-        dbg("\tGot back %d bytes from CipherUpdate...\n", len);
-
-        dbg("Writing %d bytes to %s...\n", len, outfile);
-        if(write(ofh, outbuf, len) != len) {
-            rc = AES_ERR_IO;
-            fprintf(stderr, "ERROR: Writing to the file %s failed. errno = %s\n", outfile, strerror(errno));
-            goto cleanup;
-        }
-        dbg("\tWrote %d bytes\n", len);
-
-        u_len += len;
-    }
-
-    // Check last read succeeded
-    if(read_size == -1) {
-        rc = AES_ERR_IO;
-        fprintf(stderr, "ERROR: Reading from the file %s failed. errno = %s\n", infile, strerror(errno));
-        goto cleanup;
-    }
-
-    // Finalize encryption/decryption
-    rc = AES_ERR_CIPHER_FINAL;
-    if(EVP_CipherFinal_ex(&ctx, outbuf, &f_len) == 0) {
-        fprintf(stderr, "ERROR: EVP_CipherFinal_ex failed. OpenSSL error: %s\n", ERR_error_string(ERR_get_error(), NULL));
-        goto cleanup;
-    }
-
-    dbg("u_len = %d, f_len = %d\n", u_len, f_len);
-
-    // Write the final block, if any
-    if(f_len) {
-        dbg("Writing final %d bytes to %s...\n", f_len, outfile);
-        if(write(ofh, outbuf, f_len) != f_len) {
-            rc = AES_ERR_IO;
-            fprintf(stderr, "ERROR: Final write to the file %s failed. errno = %s\n", outfile, strerror(errno));
-            goto cleanup;
-        }
-        dbg("\tWrote last %d bytes\n", f_len);
-    }
-
-    rc = u_len + f_len;
-
- cleanup:
-    EVP_CIPHER_CTX_cleanup(&ctx);
-    if(ifh != -1) close(ifh);
-    if(ofh != -1) close(ofh);
-
-    return rc;
+    return ((data.end()-data.begin())*8);
 }
+
+vector<char> read_data(char* filename)
+{
+    // open the file:
+    std::ifstream file(filename, std::ios::binary);
+    // read the data:
+    vector<char> read_key =  std::vector<char>((std::istreambuf_iterator<char>(file)),std::istreambuf_iterator<char>());
+    //std::copy(read_key.begin(), read_key.end(), std::ostream_iterator<char>(cout, ""));
+    return read_key;
+}
+
+void handleErrors(void)
+{
+    ERR_print_errors_fp(stderr);
+    cout<<"Some Error"<<endl;
+    abort();
+}
+
+vector<char> compute_hash(char* text,int text_len)
+{
+    EVP_MD_CTX *mdctx;
+    mdctx = EVP_MD_CTX_create();
+    EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
+    EVP_DigestUpdate(mdctx, text, text_len);
+    char md_value[32];
+    int md_len;
+    EVP_DigestFinal_ex(mdctx, md_value, &md_len);
+    EVP_MD_CTX_destroy(mdctx);
+    vector<char> message_digest;
+    message_digest.assign(md_value,md_value+32 );
+//    std::copy(message_digest.begin(), message_digest.end(), std::ostream_iterator<char>(cout, ""));
+    return message_digest;
+}
+
+int encrypt1( char* plaintext, int plaintext_len,  char* key,char* iv,  char* ciphertext)
+{
+    EVP_CIPHER_CTX *ctx;
+    int len;
+    int ciphertext_len;
+    if(!(ctx = EVP_CIPHER_CTX_new())) handleErrors();
+    if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+        handleErrors();
+
+    if(1 != EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len))
+        handleErrors();
+    ciphertext_len = len;
+    if(1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) handleErrors();
+    ciphertext_len += len;
+    /* Clean up */
+    EVP_CIPHER_CTX_free(ctx);
+    return ciphertext_len;
+}
+
+/**Takes the key , filename, and generates a derived key which is sha256 of E(k,fn)
+Returns fk aka Derived key.
 */
+vector<char> generate_fk(char *key, char *filename)
+{
+    char* iv="01234567890123456";
+    char ciphertext[32];
+    int cipher_len = encrypt1( filename, strlen(filename),  key,iv,  ciphertext);
+    vector<char> hash_value = compute_hash(ciphertext,cipher_len);
+    return hash_value;
+
+}
+
+std::string get_readable_hash(vector<char> myhash)
+{
+    char fin[60];
+    int i,j;
+    j=0;
+    for(i=0; i<myhash.size(); i++)
+    {
+        stringstream ss;
+        ss<<std::setw(8)<< std::setfill ('x')<<std::hex <<(int) myhash[i];
+        string temp = ss.str();
+
+        fin[j]=temp[6];
+        j++;
+        fin[j]=temp[7];
+        j++;
+        // cout<<myhash[i] << " : " <<temp[6]<<temp[7]<<endl;
+
+    }
+    return string(fin,64);
+}
+
+/**
+Input: keyfile, file_to_encrypt
+Output: Generates a .key file by the name fn2
+Pseudo:
+    fk <- hash(E(k,fn1))
+    fn2 <- hash(f1)
+*/
+
+int main(int argc, char* argv[])
+{
+
+    if (argc < 2)   // Check the value of argc. If not enough parameters have been passed, inform user and exit.
+    {
+        std::cout << "Usage is authorize <keyfile> <file_to_encrypt>"; // Inform the user of how to use the program
+        std::cin.get();
+        exit(0);
+    }
+    char* keyfile_path = argv[0];
+    char* fn1_path = argv[1];
+
+    //char* keyfile_path = "abcd";
+    //char* fn1_path = "README.md";
+    vector<char> key = read_data(argv[0]);
+    vector<char> fk = generate_fk(&key[0],fn1_path);
+    vector<char> fn2_vector = compute_hash(fn1_path, strlen(fn1_path));
+    string fn2_name = get_readable_hash(fn2_vector);
+    fn2_name.append(".share");
+
+    int success = write_data(fk,&fn2_name[0]);
+    cout<<success<<" bits were written in shared_key"<<endl;
+    cout<<"Please check for a key to share file as :"<<fn2_name<<endl<<"The file should be stored on the server by the same name. It is fn2."<<endl;
+    cout<<"Thank you."<<endl;
+    getchar();
+    //Write fk to a file by name fn2.share.key.
+
+}
