@@ -2,6 +2,11 @@
 
 Demo Can be found at http://www.youtube.com/watch?v=KpysTusTZrw&feature=youtu.be
 
+> This code is brings both shame and pride to me.
+
+Yes the code is not our best and has redundancies. But Openssl does not have the best of documentation
+for guys whose c++ has gone a little rusty and dwell in the Python-land most of the time these days. 
+
 Our attempt at making your file-sharing secure.
 * AES Encryption for your files.
 * Integrity assured using sha2 based mac.
